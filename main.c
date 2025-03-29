@@ -11,14 +11,7 @@ int main(void) {
 
 	int i;
 	const char *leds_array[] = {
-		"fpga_led0",
-		"fpga_led1",
-		"fpga_led2",
-		"fpga_led3",
-		"fpga_led4",
-		"fpga_led5",
-		"fpga_led6",
-		"fpga_led7"
+		"fpga_led2"
 	};
 	int leds_array_count = (sizeof leds_array) / (sizeof *leds_array);
 	int led_fd;
@@ -84,48 +77,55 @@ int main(void) {
 		if(result < 0)
 			error(1, errno, "could not close file '%s'", path);
 	}
+	
+	int my_count = 0;
 
-	// toggle the leds individually
-	for (i = 0 ; i < (leds_array_count * 2) ; i++ ) {
-		// toggle the brightness
-		path_length = snprintf(path, PATH_MAX,
-				"/sys/class/leds/%s/brightness",
-				leds_array[i % leds_array_count]);
-		if(path_length < 0)
-			error(1, 0, "path output error");
-		if(path_length >= PATH_MAX)
-			error(1, 0, "path length overflow");
+	while(my_count < 10)
+	{
+		// toggle the leds individually
+		for (i = 0 ; i < (leds_array_count * 2) ; i++ ) {
+			// toggle the brightness
+			path_length = snprintf(path, PATH_MAX,
+					"/sys/class/leds/%s/brightness",
+					leds_array[i % leds_array_count]);
+			if(path_length < 0)
+				error(1, 0, "path output error");
+			if(path_length >= PATH_MAX)
+				error(1, 0, "path length overflow");
 
-		led_fd = open(path, O_RDWR | O_SYNC);
-		if(led_fd < 0)
-			error(1, errno, "could not open file '%s'", path);
+			led_fd = open(path, O_RDWR | O_SYNC);
+			if(led_fd < 0)
+				error(1, errno, "could not open file '%s'", path);
 
-		result = read(led_fd, &brightness, 1);
-		if(result < 0)
-			error(1, errno, "reading 1 byte from '%s'", path);
-		if(result != 1)
-			error(1, 0, "did not read 1 byte from '%s'", path);
+			result = read(led_fd, &brightness, 1);
+			if(result < 0)
+				error(1, errno, "reading 1 byte from '%s'", path);
+			if(result != 1)
+				error(1, 0, "did not read 1 byte from '%s'", path);
 
-		if(brightness == '0')
-			brightness = '1';
-		else if(brightness == '1')
-			brightness = '0';
-		else
-			error(1, 0, "unexpected value for brightness");
+			if(brightness == '0')
+				brightness = '1';
+			else if(brightness == '1')
+				brightness = '0';
+			else
+				error(1, 0, "unexpected value for brightness");
 
-		result = write(led_fd, &brightness, 1);
-		if(result < 0)
-			error(1, errno, "writing brightness to '%s'", path);
-		if(result != 1)
-			error(1, 0, "did not write 1 byte to '%s'", path);
+			result = write(led_fd, &brightness, 1);
+			if(result < 0)
+				error(1, errno, "writing brightness to '%s'", path);
+			if(result != 1)
+				error(1, 0, "did not write 1 byte to '%s'", path);
 
-		result = close(led_fd);
-		if(result < 0)
-			error(1, errno, "could not close file '%s'", path);
+			result = close(led_fd);
+			if(result < 0)
+				error(1, errno, "could not close file '%s'", path);
 
-		result = usleep(125000);
-		if(result < 0)
-			error(1, errno, "usleep error");
+			result = usleep(125000);
+			if(result < 0)
+				error(1, errno, "usleep error");
+		}
+		
+		my_count++;
 	}
 
 	return 0;
