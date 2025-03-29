@@ -46,7 +46,28 @@ int main() {
 	
 	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
-
+	
+	
+	
+	
+	loop_count = 0;
+	led_mask = 0x03;
+	while( loop_count < 60 )
+	{
+		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
+		
+		// wait 100ms
+		usleep( 100*1000 );
+		
+		*(uint32_t *)h2p_lw_led_addr = led_mask;
+		
+		// wait 100ms
+		usleep( 100*1000 );
+		
+		loop_count++;
+	}
+	
+/*
 	// toggle the LEDs a bit
 
 	loop_count = 0;
@@ -74,7 +95,7 @@ int main() {
 		}
 		
 	} // while
-	
+*/	
 
 	// clean up our memory mapping and exit
 	
