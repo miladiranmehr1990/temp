@@ -50,7 +50,7 @@ int main() {
 	
 	
 	
-	loop_count = 0;
+	/*loop_count = 0;
 	led_mask = 0x04;
 	while( loop_count < 60 )
 	{
@@ -65,9 +65,9 @@ int main() {
 		usleep( 100*1000 );
 		
 		loop_count++;
-	}
+	}*/
 	
-/*
+
 	// toggle the LEDs a bit
 
 	loop_count = 0;
@@ -79,7 +79,7 @@ int main() {
 		*(uint32_t *)h2p_lw_led_addr = ~led_mask; 
 
 		// wait 100ms
-		usleep( 100*1000 );
+		usleep( 5000*1000 );
 		
 		// update led mask
 		if (led_direction == 0){
@@ -95,7 +95,7 @@ int main() {
 		}
 		
 	} // while
-*/	
+
 
 	// clean up our memory mapping and exit
 	
