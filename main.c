@@ -51,7 +51,7 @@ int main() {
 	
 	
 	loop_count = 0;
-	led_mask = 0x05;
+	led_mask = 0x04;
 	while( loop_count < 60 )
 	{
 		*(uint32_t *)h2p_lw_led_addr = 0x00;
