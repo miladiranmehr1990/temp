@@ -50,8 +50,8 @@ int main() {
 	
 	
 	
-	/*loop_count = 0;
-	led_mask = 0x04;
+	loop_count = 0;
+	led_mask = 0x01 >> 3;
 	while( loop_count < 60 )
 	{
 		*(uint32_t *)h2p_lw_led_addr = 0xFF;
@@ -65,9 +65,9 @@ int main() {
 		usleep( 100*1000 );
 		
 		loop_count++;
-	}*/
+	}
 	
-
+/*
 	// toggle the LEDs a bit
 
 	loop_count = 0;
@@ -95,7 +95,7 @@ int main() {
 		}
 		
 	} // while
-
+*/
 
 	// clean up our memory mapping and exit
 	
