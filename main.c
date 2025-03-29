@@ -24,7 +24,7 @@ int main() {
 	void *virtual_base;
 	int fd;
 	int loop_count;
-	int led_direction;
+	//int led_direction;
 	int led_mask;
 	void *h2p_lw_led_addr;
 
@@ -57,12 +57,12 @@ int main() {
 		*(uint32_t *)h2p_lw_led_addr = 0xFF;
 		
 		// wait 100ms
-		usleep( 100*1000 );
+		usleep( 1000*1000 );
 		
 		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
 		
 		// wait 100ms
-		usleep( 100*1000 );
+		usleep( 1000*1000 );
 		
 		loop_count++;
 	}
