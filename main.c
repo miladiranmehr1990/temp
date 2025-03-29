@@ -54,12 +54,12 @@ int main() {
 	led_mask = 0x04;
 	while( loop_count < 60 )
 	{
-		*(uint32_t *)h2p_lw_led_addr = 0x00;
+		*(uint32_t *)h2p_lw_led_addr = 0xFF;
 		
 		// wait 100ms
 		usleep( 100*1000 );
 		
-		*(uint32_t *)h2p_lw_led_addr = led_mask;
+		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
 		
 		// wait 100ms
 		usleep( 100*1000 );
