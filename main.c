@@ -51,10 +51,10 @@ int main() {
 	
 	
 	loop_count = 0;
-	led_mask = 0x03;
+	led_mask = 0x05;
 	while( loop_count < 60 )
 	{
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
+		*(uint32_t *)h2p_lw_led_addr = 0x00;
 		
 		// wait 100ms
 		usleep( 100*1000 );
