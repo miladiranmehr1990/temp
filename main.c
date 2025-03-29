@@ -1,133 +1,90 @@
+/*
+This program demonstrate how to use hps communicate with FPGA through light AXI Bridge.
+uses should program the FPGA by GHRD project before executing the program
+refer to user manual chapter 7 for details about the demo
+*/
+
+
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <error.h>
-#include <errno.h>
-#include <limits.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include "hwlib.h"
+#include "socal/socal.h"
+#include "socal/hps.h"
+#include "socal/alt_gpio.h"
+#include "hps_0.h"
 
-int main(void) {
+#define HW_REGS_BASE ( ALT_STM_OFST )
+#define HW_REGS_SPAN ( 0x04000000 )
+#define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
 
-	int i;
-	const char *leds_array[] = {
-		"fpga_led2"
-	};
-	int leds_array_count = (sizeof leds_array) / (sizeof *leds_array);
-	int led_fd;
-	char path[PATH_MAX];
-	int path_length;
-	int result;
-	char brightness;
+int main() {
 
-	// turn off all leds
-	for (i = 0 ; i < leds_array_count ; i++ ) {
-		// set trigger to none
-		path_length = snprintf(path, PATH_MAX,
-				"/sys/class/leds/%s/trigger",
-				leds_array[i]);
-		if(path_length < 0)
-			error(1, 0, "path output error");
-		if(path_length >= PATH_MAX)
-			error(1, 0, "path length overflow");
+	void *virtual_base;
+	int fd;
+	int loop_count;
+	int led_direction;
+	int led_mask;
+	void *h2p_lw_led_addr;
 
-		led_fd = open(path, O_WRONLY | O_SYNC);
-		if(led_fd < 0)
-			error(1, errno, "could not open file '%s'", path);
+	// map the address space for the LED registers into user space so we can interact with them.
+	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
 
-		result = write(led_fd, "none", 4);
-		if(result < 0)
-			error(1, errno, "writing 'none' to '%s'", path);
-		if(result != 4)
-			error(1, 0, "did not write 4 bytes to '%s'", path);
+	if( ( fd = open( "/dev/mem", ( O_RDWR | O_SYNC ) ) ) == -1 ) {
+		printf( "ERROR: could not open \"/dev/mem\"...\n" );
+		return( 1 );
+	}
 
-		result = close(led_fd);
-		if(result < 0)
-			error(1, errno, "could not close file '%s'", path);
+	virtual_base = mmap( NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, HW_REGS_BASE );
 
-		// set brightness to 0
-		path_length = snprintf(path, PATH_MAX,
-				"/sys/class/leds/%s/brightness",
-				leds_array[i]);
-		if(path_length < 0)
-			error(1, 0, "path output error");
-		if(path_length >= PATH_MAX)
-			error(1, 0, "path length overflow");
-
-		led_fd = open(path, O_WRONLY | O_SYNC);
-		if(led_fd < 0)
-			error(1, errno, "could not open file '%s'", path);
-
-		result = write(led_fd, "0", 1);
-		if(result < 0)
-			error(1, errno, "writing 'none' to '%s'", path);
-		if(result != 1)
-	
-		led_fd = open(path, O_WRONLY | O_SYNC);
-		if(led_fd < 0)
-			error(1, errno, "could not open file '%s'", path);
-
-		result = write(led_fd, "0", 1);
-		if(result < 0)
-			error(1, errno, "writing '0' to '%s'", path);
-		if(result != 1)
-			error(1, 0, "did not write 1 byte to '%s'", path);
-
-		result = close(led_fd);
-		if(result < 0)
-			error(1, errno, "could not close file '%s'", path);
+	if( virtual_base == MAP_FAILED ) {
+		printf( "ERROR: mmap() failed...\n" );
+		close( fd );
+		return( 1 );
 	}
 	
-	int my_count = 0;
+	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	
 
-	while(my_count < 10)
-	{
-		// toggle the leds individually
-		for (i = 0 ; i < (leds_array_count * 2) ; i++ ) {
-			// toggle the brightness
-			path_length = snprintf(path, PATH_MAX,
-					"/sys/class/leds/%s/brightness",
-					leds_array[i % leds_array_count]);
-			if(path_length < 0)
-				error(1, 0, "path output error");
-			if(path_length >= PATH_MAX)
-				error(1, 0, "path length overflow");
+	// toggle the LEDs a bit
 
-			led_fd = open(path, O_RDWR | O_SYNC);
-			if(led_fd < 0)
-				error(1, errno, "could not open file '%s'", path);
+	loop_count = 0;
+	led_mask = 0x01;
+	led_direction = 0; // 0: left to right direction
+	while( loop_count < 60 ) {
+		
+		// control led
+		*(uint32_t *)h2p_lw_led_addr = ~led_mask; 
 
-			result = read(led_fd, &brightness, 1);
-			if(result < 0)
-				error(1, errno, "reading 1 byte from '%s'", path);
-			if(result != 1)
-				error(1, 0, "did not read 1 byte from '%s'", path);
-
-			if(brightness == '0')
-				brightness = '1';
-			else if(brightness == '1')
-				brightness = '0';
-			else
-				error(1, 0, "unexpected value for brightness");
-
-			result = write(led_fd, &brightness, 1);
-			if(result < 0)
-				error(1, errno, "writing brightness to '%s'", path);
-			if(result != 1)
-				error(1, 0, "did not write 1 byte to '%s'", path);
-
-			result = close(led_fd);
-			if(result < 0)
-				error(1, errno, "could not close file '%s'", path);
-
-			result = usleep(125000);
-			if(result < 0)
-				error(1, errno, "usleep error");
+		// wait 100ms
+		usleep( 100*1000 );
+		
+		// update led mask
+		if (led_direction == 0){
+			led_mask <<= 1;
+			if (led_mask == (0x01 << (LED_PIO_DATA_WIDTH-1)))
+				 led_direction = 1;
+		}else{
+			led_mask >>= 1;
+			if (led_mask == 0x01){ 
+				led_direction = 0;
+				loop_count++;
+			}
 		}
 		
-		my_count++;
+	} // while
+	
+
+	// clean up our memory mapping and exit
+	
+	if( munmap( virtual_base, HW_REGS_SPAN ) != 0 ) {
+		printf( "ERROR: munmap() failed...\n" );
+		close( fd );
+		return( 1 );
 	}
 
-	return 0;
-}
+	close( fd );
 
+	return( 0 );
+}
