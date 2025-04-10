@@ -21,7 +21,8 @@ int main() {
     int dma_fd;
     int ret;
     const size_t BUFFER_SIZE = 1024; // 1KB transfer
-    
+    int i;
+	
     // Allocate source and destination buffers
     char *src_buf = malloc(BUFFER_SIZE);
     char *dest_buf = malloc(BUFFER_SIZE);
@@ -32,7 +33,7 @@ int main() {
     }
     
     // Fill source buffer with some data
-    for (int i = 0; i < BUFFER_SIZE; i++) {
+    for (i = 0; i < BUFFER_SIZE; i++) {
         src_buf[i] = i % 256;
     }
     
