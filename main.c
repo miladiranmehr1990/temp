@@ -1,111 +1,70 @@
-/*
-This program demonstrate how to use hps communicate with FPGA through light AXI Bridge.
-uses should program the FPGA by GHRD project before executing the program
-refer to user manual chapter 7 for details about the demo
-*/
-
-
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/mman.h>
-#include "hwlib.h"
-#include "socal/socal.h"
-#include "socal/hps.h"
-#include "socal/alt_gpio.h"
-#include "hps_0.h"
+#include <signal.h>
 
-#define HW_REGS_BASE ( ALT_STM_OFST )
-#define HW_REGS_SPAN ( 0x04000000 )
-#define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
+#define PRIV_TIMER_BASE 0xFFFEC600
+#define TIMER_SPAN 0x1000
+
+volatile unsigned int *timer_load;
+volatile unsigned int *timer_value;
+volatile unsigned int *timer_control;
+volatile unsigned int *timer_int_status;
+
+int timer_fd;
+void *timer_virtual;
+
+// Interrupt handler
+void timer_handler(int sig) {
+    printf("Timer interrupt occurred!\n");
+    
+    // Clear interrupt status
+    *timer_int_status = 1;
+}
 
 int main() {
+    // Open /dev/mem
+    timer_fd = open("/dev/mem", O_RDWR | O_SYNC);
+    if (timer_fd < 0) {
+        perror("Failed to open /dev/mem");
+        return -1;
+    }
 
-	void *virtual_base;
-	int fd;
-	int loop_count;
-	//int led_direction;
-	int led_mask;
-	void *h2p_lw_led_addr;
+    // Map timer registers
+    timer_virtual = mmap(NULL, TIMER_SPAN, PROT_READ | PROT_WRITE, MAP_SHARED, timer_fd, PRIV_TIMER_BASE);
+    if (timer_virtual == MAP_FAILED) {
+        perror("Failed to mmap timer");
+        close(timer_fd);
+        return -1;
+    }
 
-	// map the address space for the LED registers into user space so we can interact with them.
-	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
+    // Set up pointers to timer registers
+    timer_load = (unsigned int *)(timer_virtual + 0x00);
+    timer_value = (unsigned int *)(timer_virtual + 0x04);
+    timer_control = (unsigned int *)(timer_virtual + 0x08);
+    timer_int_status = (unsigned int *)(timer_virtual + 0x0C);
 
-	if( ( fd = open( "/dev/mem", ( O_RDWR | O_SYNC ) ) ) == -1 ) {
-		printf( "ERROR: could not open \"/dev/mem\"...\n" );
-		return( 1 );
-	}
+    // Configure signal handler
+    signal(SIGIO, timer_handler);
 
-	virtual_base = mmap( NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, HW_REGS_BASE );
+    // Configure timer
+    unsigned int prescaler = 0;  // No prescaling
+    unsigned int load_value = 1000000;  // Example value (1MHz clock -> 1Hz interrupt)
+    
+    *timer_load = load_value;
+    *timer_control = (1 << 2) | (1 << 1) | (1 << 0);  // Enable interrupt, auto-reload, enable timer
 
-	if( virtual_base == MAP_FAILED ) {
-		printf( "ERROR: mmap() failed...\n" );
-		close( fd );
-		return( 1 );
-	}
-	
-	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
-	
-	
-	
-	
-	
-	loop_count = 0;
-	led_mask = 0x01 << 0;
-	while( 1 )
-	{
-		*(uint32_t *)h2p_lw_led_addr = 0xFF;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		loop_count++;
-	}
-	
-/*
-	// toggle the LEDs a bit
+    printf("Timer configured. Waiting for interrupts...\n");
 
-	loop_count = 0;
-	led_mask = 0x01;
-	led_direction = 0; // 0: left to right direction
-	while( loop_count < 60 ) {
-		
-		// control led
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask; 
+    // Keep program running
+    while (1) {
+        sleep(1);
+    }
 
-		// wait 100ms
-		usleep( 5000*1000 );
-		
-		// update led mask
-		if (led_direction == 0){
-			led_mask <<= 1;
-			if (led_mask == (0x01 << (LED_PIO_DATA_WIDTH-1)))
-				 led_direction = 1;
-		}else{
-			led_mask >>= 1;
-			if (led_mask == 0x01){ 
-				led_direction = 0;
-				loop_count++;
-			}
-		}
-		
-	} // while
-*/
-
-	// clean up our memory mapping and exit
-	
-	if( munmap( virtual_base, HW_REGS_SPAN ) != 0 ) {
-		printf( "ERROR: munmap() failed...\n" );
-		close( fd );
-		return( 1 );
-	}
-
-	close( fd );
-
-	return( 0 );
+    // Cleanup (unreachable in this example)
+    munmap(timer_virtual, TIMER_SPAN);
+    close(timer_fd);
+    return 0;
 }
