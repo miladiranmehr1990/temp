@@ -1,111 +1,87 @@
-/*
-This program demonstrate how to use hps communicate with FPGA through light AXI Bridge.
-uses should program the FPGA by GHRD project before executing the program
-refer to user manual chapter 7 for details about the demo
-*/
-
-
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
-#include "hwlib.h"
-#include "socal/socal.h"
-#include "socal/hps.h"
-#include "socal/alt_gpio.h"
-#include "hps_0.h"
+#include <string.h>
 
-#define HW_REGS_BASE ( ALT_STM_OFST )
-#define HW_REGS_SPAN ( 0x04000000 )
-#define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
+// DMA driver IOCTL commands (these may vary depending on your kernel version)
+#define DMA_IOCTL_MAGIC 'd'
+#define DMA_IOCTL_START _IOW(DMA_IOCTL_MAGIC, 0, struct dma_transfer*)
+#define DMA_IOCTL_WAIT  _IOR(DMA_IOCTL_MAGIC, 1, int)
+
+struct dma_transfer {
+    void* src;      // Source physical address
+    void* dest;     // Destination physical address
+    size_t length;  // Transfer length in bytes
+};
 
 int main() {
-
-	void *virtual_base;
-	int fd;
-	int loop_count;
-	//int led_direction;
-	int led_mask;
-	void *h2p_lw_led_addr;
-
-	// map the address space for the LED registers into user space so we can interact with them.
-	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
-
-	if( ( fd = open( "/dev/mem", ( O_RDWR | O_SYNC ) ) ) == -1 ) {
-		printf( "ERROR: could not open \"/dev/mem\"...\n" );
-		return( 1 );
-	}
-
-	virtual_base = mmap( NULL, HW_REGS_SPAN, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, HW_REGS_BASE );
-
-	if( virtual_base == MAP_FAILED ) {
-		printf( "ERROR: mmap() failed...\n" );
-		close( fd );
-		return( 1 );
-	}
-	
-	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
-	
-	
-	
-	
-	
-	loop_count = 0;
-	led_mask = 0x01 << 0;
-	while( 1 )
-	{
-		*(uint32_t *)h2p_lw_led_addr = 0xFF;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		loop_count++;
-	}
-	
-/*
-	// toggle the LEDs a bit
-
-	loop_count = 0;
-	led_mask = 0x01;
-	led_direction = 0; // 0: left to right direction
-	while( loop_count < 60 ) {
-		
-		// control led
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask; 
-
-		// wait 100ms
-		usleep( 5000*1000 );
-		
-		// update led mask
-		if (led_direction == 0){
-			led_mask <<= 1;
-			if (led_mask == (0x01 << (LED_PIO_DATA_WIDTH-1)))
-				 led_direction = 1;
-		}else{
-			led_mask >>= 1;
-			if (led_mask == 0x01){ 
-				led_direction = 0;
-				loop_count++;
-			}
-		}
-		
-	} // while
-*/
-
-	// clean up our memory mapping and exit
-	
-	if( munmap( virtual_base, HW_REGS_SPAN ) != 0 ) {
-		printf( "ERROR: munmap() failed...\n" );
-		close( fd );
-		return( 1 );
-	}
-
-	close( fd );
-
-	return( 0 );
+    int dma_fd;
+    int ret;
+    const size_t BUFFER_SIZE = 1024; // 1KB transfer
+    
+    // Allocate source and destination buffers
+    char *src_buf = malloc(BUFFER_SIZE);
+    char *dest_buf = malloc(BUFFER_SIZE);
+    
+    if (!src_buf || !dest_buf) {
+        perror("Failed to allocate buffers");
+        return -1;
+    }
+    
+    // Fill source buffer with some data
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        src_buf[i] = i % 256;
+    }
+    
+    // Open DMA device
+    dma_fd = open("/dev/dma_0", O_RDWR);
+    if (dma_fd < 0) {
+        perror("Failed to open /dev/dma_0");
+        free(src_buf);
+        free(dest_buf);
+        return -1;
+    }
+    
+    // Prepare DMA transfer structure
+    struct dma_transfer transfer = {
+        .src = src_buf,
+        .dest = dest_buf,
+        .length = BUFFER_SIZE
+    };
+    
+    // Start DMA transfer
+    ret = ioctl(dma_fd, DMA_IOCTL_START, &transfer);
+    if (ret < 0) {
+        perror("DMA transfer failed");
+        close(dma_fd);
+        free(src_buf);
+        free(dest_buf);
+        return -1;
+    }
+    
+    // Wait for DMA to complete
+    int status;
+    ret = ioctl(dma_fd, DMA_IOCTL_WAIT, &status);
+    if (ret < 0) {
+        perror("DMA wait failed");
+    } else {
+        printf("DMA transfer completed with status: %d\n", status);
+        
+        // Verify the transfer
+        if (memcmp(src_buf, dest_buf, BUFFER_SIZE) == 0) {
+            printf("Data verification successful!\n");
+        } else {
+            printf("Data verification failed!\n");
+        }
+    }
+    
+    // Clean up
+    close(dma_fd);
+    free(src_buf);
+    free(dest_buf);
+    
+    return 0;
 }
