@@ -27,9 +27,6 @@ int main() {
     void *virtual_base;
     int fd;
     void *h2p_lw_led_addr;
-	int i;
-	int led_mask;
-	int loop_count;
     
     // DMA related variables
     void *dma_virtual_base;
@@ -46,7 +43,7 @@ int main() {
     }
     
     // Fill the buffer with some pattern (for example, incrementing values)
-    for (i = 0; i < BUFFER_SIZE; i++) {
+    for (int i = 0; i < BUFFER_SIZE; i++) {
         source_buffer[i] = i % 256;
     }
 
@@ -89,26 +86,6 @@ int main() {
     *dma_write_addr_reg = (uint32_t)h2p_lw_led_addr;  // Destination address (FPGA LED register)
     *dma_len_reg = BUFFER_SIZE;  // Transfer length
     
-	printf("Hello, OK!\n");
-	
-	led_mask = 0x01 << 0;
-	while( loop_count < 10000 )
-	{
-		*(uint32_t *)h2p_lw_led_addr = 0xFF;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
-		
-		// wait 100ms
-		usleep( 1 );
-		
-		loop_count++;
-	}
-	
-	printf("Going to DMA!\n");
-	
 	while(1)
 	{
 		// Start DMA transfer (set GO bit in CSR)
