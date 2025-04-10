@@ -51,18 +51,18 @@ int main() {
 	
 	
 	loop_count = 0;
-	led_mask = 0x01 << 3;
-	while( loop_count < 60 )
+	led_mask = 0x01 << 0;
+	while( 1 )
 	{
 		*(uint32_t *)h2p_lw_led_addr = 0xFF;
 		
 		// wait 100ms
-		usleep( 1000*1000 );
+		usleep( 1 );
 		
 		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
 		
 		// wait 100ms
-		usleep( 1000*1000 );
+		usleep( 1 );
 		
 		loop_count++;
 	}
