@@ -27,6 +27,8 @@ int main() {
     char *src_buf = malloc(BUFFER_SIZE);
     char *dest_buf = malloc(BUFFER_SIZE);
     
+	printf("Helooooo\n" );
+	
     if (!src_buf || !dest_buf) {
         perror("Failed to allocate buffers");
         return -1;
