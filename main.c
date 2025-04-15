@@ -19,6 +19,8 @@ refer to user manual chapter 7 for details about the demo
 #define HW_REGS_SPAN ( 0x04000000 )
 #define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
 
+#define MY_BASE	0x0000
+
 int main() {
 
 	void *virtual_base;
@@ -27,6 +29,7 @@ int main() {
 	//int led_direction;
 	int led_mask;
 	void *h2p_lw_led_addr;
+	void *my_addr;
 
 	// map the address space for the LED registers into user space so we can interact with them.
 	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
@@ -46,8 +49,10 @@ int main() {
 	
 	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
+	my_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
 	
+	*(uint32_t *)my_addr = 0xFF;
 	
 	
 	loop_count = 0;
@@ -63,6 +68,7 @@ int main() {
 		
 		// wait 100ms
 		usleep( 1 );
+		
 		
 		loop_count++;
 	}
