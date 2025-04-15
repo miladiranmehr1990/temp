@@ -19,7 +19,7 @@ refer to user manual chapter 7 for details about the demo
 #define HW_REGS_SPAN ( 0x04000000 )
 #define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
 
-#define MY_BASE	0x0000
+#define MY_BASE	0x3010
 
 int main() {
 
@@ -52,7 +52,7 @@ int main() {
 	my_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
 	
-	*(uint32_t *)my_addr = 0xFF;
+	
 	
 	
 	loop_count = 0;
@@ -60,16 +60,18 @@ int main() {
 	while( 1 )
 	{
 		*(uint32_t *)h2p_lw_led_addr = 0xFF;
+		*(uint32_t *)my_addr = 0x00000001;
 		
 		// wait 100ms
-		usleep( 1 );
+		usleep( 100*1000 );
 		
 		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
+		*(uint32_t *)my_addr = 0x00000000;
 		
 		// wait 100ms
-		usleep( 1 );
+		usleep( 100*1000 );
 		
-		
+		printf( "Doing...\n" );
 		loop_count++;
 	}
 	
