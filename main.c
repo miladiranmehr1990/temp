@@ -21,6 +21,8 @@ refer to user manual chapter 7 for details about the demo
 
 #define MY_BASE	0x3010
 
+#define MY_BASE2	0x3020
+
 int main() {
 
 	void *virtual_base;
@@ -30,6 +32,8 @@ int main() {
 	int led_mask;
 	void *h2p_lw_led_addr;
 	void *my_addr;
+	void *my_addr2;
+	uint32_t read_value = 0;
 
 	// map the address space for the LED registers into user space so we can interact with them.
 	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
@@ -47,9 +51,11 @@ int main() {
 		return( 1 );
 	}
 	
-	h2p_lw_led_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	h2p_lw_led_addr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
-	my_addr=virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	my_addr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	
+	my_addr2 = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE2 ) & ( unsigned long)( HW_REGS_MASK ) );
 	
 	
 	
@@ -71,7 +77,10 @@ int main() {
 		// wait 100ms
 		usleep( 100*1000 );
 		
-		printf( "Doing..., address=%p\n", my_addr);
+		// Read from slave B
+		read_value = *(uint32_t *)my_addr2;
+		
+		printf( "Doing..., read_value=%#x\n", read_value);
 		loop_count++;
 	}
 	
