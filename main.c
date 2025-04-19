@@ -66,12 +66,12 @@ int main() {
 		usleep( 100*1000 );
 		
 		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
-		*(uint32_t *)my_addr = 0x00000000;
+		//*(uint32_t *)my_addr = 0x00000000;
 		
 		// wait 100ms
 		usleep( 100*1000 );
 		
-		printf( "Doing...\n" );
+		printf( "Doing..., address=%p\n", my_addr);
 		loop_count++;
 	}
 	
