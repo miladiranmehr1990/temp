@@ -19,21 +19,29 @@ refer to user manual chapter 7 for details about the demo
 #define HW_REGS_SPAN ( 0x04000000 )
 #define HW_REGS_MASK ( HW_REGS_SPAN - 1 )
 
-#define MY_BASE	0x3010
-
-#define MY_BASE2	0x3020
+#define LASER_CONTROL_REGISTER_BASE	0x3010
+#define LASER_POINT_START_ADDRESS_BASE	0x3020
+#define LASER_POINT_END_ADDRESS_BASE	0x3030
+#define LASER_POINT_CURRENT_ADDRESS_BASE	0x3040
+#define LASER_FEEDBACK_BASE	0x3050
 
 int main() {
 
 	void *virtual_base;
 	int fd;
-	int loop_count;
-	//int led_direction;
-	int led_mask;
-	void *h2p_lw_led_addr;
-	void *my_addr;
-	void *my_addr2;
-	uint32_t read_value = 0;
+	
+	//void *h2p_lw_led_addr;
+	
+	void *laser_control_register_ptr;
+	void *laser_point_start_address_ptr;
+	void *laser_point_end_address_ptr;
+	void *laser_point_current_address_ptr;
+	void *laser_feedback_ptr;
+	
+	uint32_t laser_point_current_address = 0x00000000;
+	uint32_t laser_point_current_address_prev = 0x00000000;
+	uint32_t laser_feedback = 0x00000000;
+	uint32_t laser_feedback_prev = 0x00000000;
 
 	// map the address space for the LED registers into user space so we can interact with them.
 	// we'll actually map in the entire CSR span of the HPS since we want to access various registers within that span
@@ -51,68 +59,81 @@ int main() {
 		return( 1 );
 	}
 	
-	h2p_lw_led_addr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	//h2p_lw_led_addr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LED_PIO_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
-	my_addr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	laser_control_register_ptr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LASER_CONTROL_REGISTER_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	laser_point_start_address_ptr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LASER_POINT_START_ADDRESS_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	laser_point_end_address_ptr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LASER_POINT_END_ADDRESS_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	laser_point_current_address_ptr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LASER_POINT_CURRENT_ADDRESS_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
+	laser_feedback_ptr = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + LASER_FEEDBACK_BASE ) & ( unsigned long)( HW_REGS_MASK ) );
 	
-	my_addr2 = virtual_base + ( ( unsigned long  )( ALT_LWFPGASLVS_OFST + MY_BASE2 ) & ( unsigned long)( HW_REGS_MASK ) );
+	
+	printf("Hello World!\n");
+	
+	*(uint32_t *)laser_control_register_ptr = 0x00000000;
+	usleep( 3000*1000 );
+	
+	printf("Starting laser...\n");
+	
+	// Start laser
+	*(uint32_t *)laser_point_start_address_ptr = 0x20000000;
+	*(uint32_t *)laser_point_end_address_ptr = 0x20000008;
+	*(uint32_t *)laser_control_register_ptr = 0x00000001;
 	
 	
+	int ff = 0;
 	
-	
-	
-	loop_count = 0;
-	led_mask = 0x01 << 0;
 	while( 1 )
 	{
-		*(uint32_t *)h2p_lw_led_addr = 0xFF;
-		*(uint32_t *)my_addr = 0x00000001;
-		
-		// wait 100ms
-		usleep( 100*1000 );
-		
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask;
-		//*(uint32_t *)my_addr = 0x00000000;
-		
-		// wait 100ms
-		usleep( 100*1000 );
-		
-		// Read from slave B
-		read_value = *(uint32_t *)my_addr2;
-		
-		printf( "Doing..., read_value=%#x\n", read_value);
-		loop_count++;
-	}
-	
-/*
-	// toggle the LEDs a bit
-
-	loop_count = 0;
-	led_mask = 0x01;
-	led_direction = 0; // 0: left to right direction
-	while( loop_count < 60 ) {
-		
-		// control led
-		*(uint32_t *)h2p_lw_led_addr = ~led_mask; 
-
-		// wait 100ms
-		usleep( 5000*1000 );
-		
-		// update led mask
-		if (led_direction == 0){
-			led_mask <<= 1;
-			if (led_mask == (0x01 << (LED_PIO_DATA_WIDTH-1)))
-				 led_direction = 1;
-		}else{
-			led_mask >>= 1;
-			if (led_mask == 0x01){ 
-				led_direction = 0;
-				loop_count++;
-			}
+		switch(ff)
+		{
+				case 0:
+					*(uint32_t *)laser_control_register_ptr = 0x00000000;
+					ff = 1;
+					break;
+				
+				case 1:
+					*(uint32_t *)laser_control_register_ptr = 0x00000001;
+					ff = 2;
+					break;
+				
+				case 2:
+					*(uint32_t *)laser_control_register_ptr = 0x00000002;
+					ff = 3;
+					break;
+				
+				case 3:
+					*(uint32_t *)laser_control_register_ptr = 0x00000003;
+					ff = 4;
+					break;
+					
+				case 4:
+					*(uint32_t *)laser_control_register_ptr = 0x00000004;
+					ff = 0;
+					break;
+				
+				default:
+					break;
 		}
+		usleep( 1000*1000 );
 		
-	} // while
-*/
+		
+		laser_point_current_address = *(uint32_t *)laser_point_current_address_ptr;
+		laser_feedback = *(uint32_t *)laser_feedback_ptr;
+		
+		if(laser_point_current_address_prev != laser_point_current_address)
+		{
+			laser_point_current_address_prev = laser_point_current_address;
+			printf( "Changed Value: laser_point_current_address=%#x\n", laser_point_current_address);
+		}
+		else{}
+		if(laser_feedback_prev != laser_feedback)
+		{
+			laser_feedback_prev = laser_feedback;
+			printf( "Changed Value: laser_feedback=%#x\n", laser_feedback);
+		}
+		else{}
+	}
 
 	// clean up our memory mapping and exit
 	
