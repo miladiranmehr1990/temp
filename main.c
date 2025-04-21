@@ -77,47 +77,11 @@ int main() {
 	
 	// Start laser
 	*(uint32_t *)laser_point_start_address_ptr = 0x20000000;
-	*(uint32_t *)laser_point_end_address_ptr = 0x20000008;
+	*(uint32_t *)laser_point_end_address_ptr = 0x20000010;
 	*(uint32_t *)laser_control_register_ptr = 0x00000001;
-	
-	
-	int ff = 0;
 	
 	while( 1 )
 	{
-		switch(ff)
-		{
-				case 0:
-					*(uint32_t *)laser_control_register_ptr = 0x00000000;
-					ff = 1;
-					break;
-				
-				case 1:
-					*(uint32_t *)laser_control_register_ptr = 0x00000001;
-					ff = 2;
-					break;
-				
-				case 2:
-					*(uint32_t *)laser_control_register_ptr = 0x00000002;
-					ff = 3;
-					break;
-				
-				case 3:
-					*(uint32_t *)laser_control_register_ptr = 0x00000003;
-					ff = 4;
-					break;
-					
-				case 4:
-					*(uint32_t *)laser_control_register_ptr = 0x00000004;
-					ff = 0;
-					break;
-				
-				default:
-					break;
-		}
-		usleep( 1000*1000 );
-		
-		
 		laser_point_current_address = *(uint32_t *)laser_point_current_address_ptr;
 		laser_feedback = *(uint32_t *)laser_feedback_ptr;
 		
