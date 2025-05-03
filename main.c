@@ -77,7 +77,7 @@ int main() {
 	
 	// Start laser
 	*(uint32_t *)laser_point_start_address_ptr = 0x20000000;
-	*(uint32_t *)laser_point_end_address_ptr = 0x20000010;
+	*(uint32_t *)laser_point_end_address_ptr = 0x20000860;
 	*(uint32_t *)laser_control_register_ptr = 0x00000001;
 	
 	while( 1 )
